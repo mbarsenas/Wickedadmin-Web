@@ -1,0 +1,30 @@
+name: Sable Always-On Monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: sable-always-on-monitor
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run Sable monitoring cycle
+        shell: bash
+        env:
+          SABLE_AUDIENCE: https://sable-ai.markbarsenas366.chatgpt.site/api/monitoring/run
+        run: |
+          set -euo pipefail
+          encoded_audience="$(jq -rn --arg value "$SABLE_AUDIENCE" '$value|@uri')"
+          token_json="$(curl --fail --silent --show-error             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$encoded_audience")"
+          token="$(jq -r '.value' <<<"$token_json")"
+          curl --fail --silent --show-error             -X POST             -H "Authorization: Bearer $token"             "$SABLE_AUDIENCE"
